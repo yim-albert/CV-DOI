@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DOI → Publication List</title>
+  <script>
+    async function addPublication() {
+      const doiInput = document.getElementById("doi");
+      const list = document.getElementById("pub-list");
+      const doi = doiInput.value.trim();
+      if (!doi) return;
+
+      try {
+        const res = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}`);
+        if (!res.ok) throw new Error("DOI not found");
+        const data = await res.json();
+        const item = data.message;
+
+        const authors = (item.author || [])
+          .map(a => `${a.given || ""} ${a.family || ""}`.trim())
+          .join(", ");
+
+        const title = Array.isArray(item.title) ? item.title[0] : item.title;
+        const container = item["container-title"] ? item["container-title"][0] : "";
+        const year = item.issued && item.issued["date-parts"] ? item.issued["date-parts"][0][0] : "";
+
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${title}</strong> (${year}). ${authors}. <em>${container}</em>. DOI: ${doi}`;
+        list.appendChild(li);
+        doiInput.value = "";
+      } catch (err) {
+        alert("Could not fetch metadata for that DOI.");
+      }
+    }
+  </script>
+  <style>
+    body { font-family: sans-serif; margin: 40px; max-width: 700px; }
+    input { padding: 8px; width: 80%; }
+    button { padding: 8px 14px; margin-left: 6px; }
+  </style>
+</head>
+<body>
+  <h1>DOI → Publication List</h1>
+  <p>Enter a DOI and it will fetch publication metadata using the CrossRef API.</p>
+
+  <input id="doi" placeholder="Enter DOI here" />
+  <button onclick="addPublication()">Add</button>
+
+  <h2>Your Publications</h2>
+  <ol id="pub-list"></ol>
+</body>
+</html>
